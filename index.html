@@ -515,7 +515,7 @@ if('webkitSpeechRecognition' in window || 'SpeechRecognition' in window){
 
 function vaStart(){
   if(!recognition){ alert('Voice not supported'); return; }
-  if(speechSynthesis.speaking) speechSynthesis.cancel();
+  if(speechSynthesis.speaking) speechSynthesis.cancel();    
   recognition.lang=vaLang.value||'en-IN';
   recognition.start(); logLine('🎧 Listening… ('+recognition.lang+')');
 }
@@ -672,108 +672,118 @@ function loadWeatherAndCity(){
 loadWeatherAndCity();
 </script>
 <script>
-/* ===================== Rapid AI Assistant (Frontend Only) ===================== */
-const OPENAI_KEY = "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"; // ⚠️ Use your key only for testing
+/* ===================== RAPID AI ASSISTANT (Offline Local Version) ===================== */
 
-async function askRapid(prompt){
-  try{
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + OPENAI_KEY
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: "You are Rapid, an AI voice assistant inside a Lucknow navigation app. Speak concisely and clearly." },
-          { role: "user", content: prompt }
-        ]
-      })
-    });
-    const data = await res.json();
-    return data.choices[0].message.content.trim();
-  }catch(err){
-    return "Rapid could not connect to OpenAI right now.";
-  }
+// Voice setup
+const rapidName = "Rapid";
+function speak(text){
+  if(!('speechSynthesis' in window)) return alert("Speech not supported");
+  const msg = new SpeechSynthesisUtterance(text);
+  msg.lang = "en-IN";
+  msg.pitch = 1;
+  msg.rate = 1;
+  window.speechSynthesis.speak(msg);
 }
 
-/* Replace old handleCommand with this one */
-async function handleCommand(raw){
-  const q = raw.toLowerCase().trim();
-  logLine("🎙️ You: " + q);
+// Listening setup
+if('webkitSpeechRecognition' in window || 'SpeechRecognition' in window){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.continuous = false;
+  recognition.lang = 'en-IN';
+  recognition.onresult = (e)=>{
+    const text = e.results[0][0].transcript.trim();
+    logLine(`🎙️ You: ${text}`);
+    handleRapidCommand(text.toLowerCase());
+  };
+  recognition.onerror = ()=>logLine("⚠️ Mic error");
+}
 
-  // --- Activation ---
-  if(q === "hey rapid" || q === "rapid"){
-    speak("Hello Adarsh! Rapid is online. How can I help?");
-    logLine("🤖 Rapid: Hello Adarsh! Rapid is online.");
-    return;
+// Start and stop buttons (reuse from your UI)
+function vaStart(){
+  if(speechSynthesis.speaking) speechSynthesis.cancel();
+  recognition.start();
+  speak("Listening...");
+  logLine("🎧 Rapid is listening...");
+}
+function vaStop(){ recognition.stop(); speak("Okay, stopped listening."); logLine("🛑 Rapid stopped."); }
+
+// Core logic
+function handleRapidCommand(cmd){
+  let reply = "";
+
+  // Greetings
+  if(cmd.includes("hey rapid") || cmd.includes("hello")){
+    reply = "Hello Adarsh! Rapid is online and ready to help.";
   }
 
-  // --- Basic actions ---
-  if(q.includes("dark mode")){ 
+  // Time & Date
+  else if(cmd.includes("time")){
+    const now = new Date();
+    reply = `The time is ${now.toLocaleTimeString()}.`;
+  }
+  else if(cmd.includes("date") || cmd.includes("day")){
+    const now = new Date();
+    reply = `Today is ${now.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'})}.`;
+  }
+
+  // Weather (simulated)
+  else if(cmd.includes("weather")){
+    reply = "It's a pleasant day in Lucknow, around 27 degrees Celsius with clear skies.";
+  }
+
+  // Mode & theme
+  else if(cmd.includes("dark mode")){
     document.documentElement.setAttribute('data-theme','dark');
-    speak("Dark mode activated."); return;
+    reply = "Dark mode activated.";
   }
-  if(q.includes("light mode")){ 
+  else if(cmd.includes("light mode")){
     document.documentElement.removeAttribute('data-theme');
-    speak("Light mode activated."); return;
+    reply = "Light mode activated.";
   }
 
-  if(q.includes("show traffic")){ toggleTraffic(true); speak("Traffic layer on."); return; }
-  if(q.includes("hide traffic")){ toggleTraffic(false); speak("Traffic layer off."); return; }
-  if(q.includes("satellite on")){ toggleSatellite(true); speak("Satellite view enabled."); return; }
-  if(q.includes("satellite off")){ toggleSatellite(false); speak("Satellite view disabled."); return; }
-  if(q.includes("reset map")){ resetMap(); speak("Map reset."); return; }
+  // Map control
+  else if(cmd.includes("show hospital")){ showCategory("Hospitals"); reply = "Showing nearby hospitals on the map."; }
+  else if(cmd.includes("show parking")){ showCategory("Parking"); reply = "Showing parking zones near you."; }
+  else if(cmd.includes("show metro")){ showCategory("Metro Stations"); reply = "Here are metro stations nearby."; }
+  else if(cmd.includes("show restaurant")){ showCategory("Restaurants"); reply = "Showing restaurants near Lucknow."; }
+  else if(cmd.includes("show hotels")){ showCategory("Hotels"); reply = "Here are some hotels near your area."; }
+  else if(cmd.includes("reset map")){ resetMap(); reply = "Map reset to default view."; }
 
-  // --- Fare Calculation ---
-  if(q.includes("fare from")){
-    const mm = q.match(/from\s+(.+?)\s+to\s+(.+?)(?:\s+by\s+(auto|rickshaw|bus|car))?$/i);
+  // Fare calculation
+  else if(cmd.includes("fare from")){
+    const mm = cmd.match(/from\s+(.+?)\s+to\s+(.+?)(?:\s+by\s+(auto|rickshaw|bus|car))?$/i);
     if(mm){
       document.getElementById('from').value = mm[1];
       document.getElementById('to').value = mm[2];
       if(mm[3]) document.getElementById('mode').value = mm[3];
       calculateFare();
-      speak(`Calculating fare from ${mm[1]} to ${mm[2]}`);
-      return;
-    }
+      reply = `Calculating fare from ${mm[1]} to ${mm[2]}.`;
+    }else reply = "Please say, for example: fare from Charbagh to Hazratganj by auto.";
   }
 
-  // --- Metro fare ---
-  if(q.includes("metro fare from")){
-    const mm = q.match(/from\s+(.+?)\s+to\s+(.+)$/i);
-    if(mm){
-      setSelectByText(metroFrom, mm[1]);
-      setSelectByText(metroTo, mm[2]);
-      calculateMetroFare();
-      speak(`Checking metro fare from ${mm[1]} to ${mm[2]}`);
-      return;
-    }
+  // Small talk
+  else if(cmd.includes("who are you")){
+    reply = "I am Rapid, your personal assistant made by Adarsh Tripathi.";
+  }
+  else if(cmd.includes("how are you")){
+    reply = "I am always great when working with you, Adarsh!";
+  }
+  else if(cmd.includes("thank")){
+    reply = "You're welcome!";
   }
 
-  // --- Map Queries ---
-  if(q.includes("show hospital")){ showCategory("Hospitals"); speak("Showing hospitals near Lucknow."); return; }
-  if(q.includes("show metro")){ showCategory("Metro Stations"); speak("Showing metro stations."); return; }
-  if(q.includes("show restaurant")){ showCategory("Restaurants"); speak("Showing restaurants near Lucknow."); return; }
-  if(q.includes("show parking")){ showCategory("Parking"); speak("Showing parking areas."); return; }
-  if(q.includes("show hotel")){ showCategory("Hotels"); speak("Showing hotels."); return; }
-
-  // --- Information Query (AI Mode) ---
-  if(q.startsWith("who") || q.startsWith("what") || q.startsWith("where") || q.startsWith("tell") || q.startsWith("when")){
-    logLine("🤖 Rapid: Searching...");
-    speak("Let me think...");
-    const aiReply = await askRapid(q);
-    logLine("🤖 Rapid: " + aiReply);
-    speak(aiReply);
-    return;
+  // Fallback
+  else{
+    reply = "Sorry, I didn't catch that. Please try again or ask something else.";
   }
 
-  // --- Chat fallback ---
-  const aiReply = await askRapid(q);
-  logLine("🤖 Rapid: " + aiReply);
-  speak(aiReply);
+  // Speak and show reply
+  logLine(`🤖 ${rapidName}: ${reply}`);
+  speak(reply);
 }
 </script>
+
 
 
 </body>
