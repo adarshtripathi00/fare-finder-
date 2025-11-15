@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fare Finder & City Navigator – Lucknow</title>
+<style>
+  :root{
+    --brand:#ff8800; --brand-2:#ff6600; --bg:#fffaf3; --text:#222; --card:#ffffff; --muted:#666; --border:#ffd7a0;
+  }
+  [data-theme="dark"]{
+    --brand:#ff8800; --brand-2:#ffae58; --bg:#121212; --text:#f2f2f2; --card:#1c1c1c; --muted:#bbb; --border:#2a2a2a;
+  }
+  *{box-sizing:border-box}
+  /* Smooth theme feel */
+  html, body, section, header, .va-panel, .info-bar, .lang-drop, input, select, textarea, .btn{
+    transition: background .25s ease, color .25s ease, border-color .25s ease, box-shadow .25s ease;
+  }
+
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);scroll-behavior:smooth}
+  header{
+    position:sticky; top:0; z-index:20;
+    background:var(--brand); color:#fff; padding:14px 16px;
+    box-shadow:0 3px 10px rgba(0,0,0,.18);
+    display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap
+  }
+  .title{font-weight:800; letter-spacing:.3px}
+  .top-actions{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  .btn, button{
+    border:1px solid transparent; background:var(--brand); color:#fff; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:600
+  }
+  .btn.outline{background:transparent;border-color:#fff;color:#fff}
+  .btn.ghost{background:transparent;border-color:var(--border);color:var(--text)}
+  .btn:disabled{opacity:.6;cursor:not-allowed}
+  main{max-width:1000px; margin:0 auto; padding:24px 16px}
+  section{margin:24px 0; padding:20px; background:var(--card); border:1px solid var(--border); border-radius:12px; box-shadow:0 3px 10px rgba(0,0,0,.06)}
+  h2{margin:0 0 12px; color:var(--brand-2)}
+  .grid{display:grid; gap:14px}
+  @media(min-width:800px){ .grid.cols-2{grid-template-columns:1fr 1fr} }
+  label{font-size:13px; color:var(--muted)}
+  input, select, textarea{
+    width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:transparent; color:var(--text)
+  }
+  .result{margin-top:10px; font-weight:700; color:var(--brand-2); text-align:center}
+  .pillbar{display:flex; flex-wrap:wrap; gap:8px}
+  .pill{border:1px solid var(--brand); color:var(--brand); padding:8px 10px; border-radius:999px; cursor:pointer; font-weight:700; background:transparent}
+  .pill:hover{background:var(--brand); color:#fff}
+  iframe{width:100%; height:420px; border:0; border-radius:12px; box-shadow:0 3px 10px rgba(0,0,0,.08)}
+  footer{margin:40px auto 20px; text-align:center; color:var(--muted)}
+  /* Voice Assistant */
+  .va-fab{
+    position:fixed; right:16px; bottom:16px; width:58px; height:58px; border-radius:50%;
+    display:grid; place-items:center; font-size:24px; background:var(--brand); color:#fff;
+    border:0; box-shadow:0 6px 18px rgba(0,0,0,.25); z-index:25
+  }
+  .va-panel{
+    position:fixed; right:16px; bottom:86px; width:320px; max-width:92vw;
+    background:var(--card); color:var(--text); border:1px solid var(--border);
+    border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.35); display:none; overflow:hidden; z-index:26
+  }
+  .va-hd{background:var(--brand); color:#fff; padding:10px 12px; display:flex; justify-content:space-between; align-items:center}
+  .va-bd{padding:10px; max-height:220px; overflow:auto; font-size:14px}
+  .va-ctl{display:flex; gap:8px; padding:10px; border-top:1px solid var(--border)}
+  .va-ctl > *{flex:1}
+  /* Language menu */
+  .lang-wrap{position:relative}
+  .lang-drop{
+    position:absolute; right:0; top:110%; width:min(92vw, 360px); max-height:320px; overflow:auto;
+    border:1px solid var(--border); background:var(--card); border-radius:10px; padding:8px; display:none; z-index:30
+  }
+  .lang-drop button{display:block; width:100%; text-align:left; background:transparent; color:var(--text); border:1px solid var(--border); margin:6px 0; border-radius:8px}
+  .muted{color:var(--muted); font-size:13px}
+  .row{display:flex; gap:8px; align-items:center}
+
+  /* === NEW: Top Info Bar === */
+  .info-bar{
+    max-width:1000px; margin:12px auto 0; padding:10px 12px;
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between;
+    box-shadow:0 3px 10px rgba(0,0,0,.06)
+  }
+  .info-left{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+  .tag{padding:6px 10px; border:1px solid var(--border); border-radius:999px; font-weight:700}
+  .greet{font-weight:800; color:var(--brand-2)}
+  .map-ctl-bar{display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:10px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="row">
+    <span class="title">🧭 Fare Finder & City Navigator – Lucknow</span>
+  </div>
+
+  <div class="top-actions">
+    <!-- Language picker -->
+    <div class="lang-wrap">
+      <button class="btn outline" id="langBtn">🌐 Language</button>
+      <div class="lang-drop" id="langDrop">
+        <div class="muted" style="padding:4px 6px">100+ languages powered by Google Translate</div>
+        <!-- language buttons will be injected -->
+      </div>
+    </div>
+
+    <button class="btn outline" id="themeBtn" title="Toggle theme">🌓 Theme</button>
+  </div>
+
+  <!-- Hidden Google Translate mount -->
+  <div id="google_translate_element" style="position:absolute; inset:0; opacity:0; pointer-events:none;"></div>
+</header>
+
+<!-- === NEW: Smart Top Info Bar === -->
+<div class="info-bar" id="infoBar">
+  <div class="info-left">
+    <span class="tag" id="dateTag">📅 --</span>
+    <span class="tag" id="timeTag">🕒 --</span>
+    <span class="tag" id="cityTag">📍 Detecting…</span>
+    <span class="tag" id="weatherTag">🌤️ Loading…</span>
+  </div>
+  <div class="greet" id="greetTxt">Hello, Adarsh!</div>
+</div>
+
+<main>
+
+  <!-- Fare calculators -->
+  <section id="fare">
+    <h2>🚗 Fare Calculators</h2>
+    <div class="grid cols-2">
+      <div>
+        <label>From</label>
+        <input id="from" placeholder="Start (e.g., Charbagh)">
+        <label>To</label>
+        <input id="to" placeholder="Destination (e.g., Hazratganj)">
+        <div class="grid" style="grid-template-columns:1fr 1fr">
+          <div>
+            <label>Mode</label>
+            <select id="mode">
+              <option value="auto">Auto</option>
+              <option value="rickshaw">E-Rickshaw</option>
+              <option value="bus">Bus</option>
+              <option value="car">Car / Taxi</option>
+            </select>
+          </div>
+          <div>
+            <label>Distance (km) – optional</label>
+            <input id="km" type="number" min="0" step="0.1" placeholder="If known">
+          </div>
+        </div>
+        <button class="btn" onclick="calculateFare()">Calculate Fare</button>
+        <div class="result" id="fareResult"></div>
+
+        <div class="muted" style="margin-top:8px">
+          Tip: “Get Route & Time” se approx time bhi dekho (embedded directions).
+        </div>
+        <div class="grid" style="grid-template-columns:1fr 1fr; margin-top:8px">
+          <button class="btn ghost" onclick="openDirections('driving')">🚘 Get Route & Time</button>
+          <button class="btn ghost" onclick="openDirections('transit')">🚇 Metro/Bus Route</button>
+        </div>
+      </div>
+
+      <div>
+        <h3 style="margin:0 0 6px; color:var(--brand-2)">Lucknow Metro Fare</h3>
+        <div class="grid cols-2">
+          <div>
+            <label>From Station</label>
+            <select id="metroFrom"></select>
+          </div>
+          <div>
+            <label>To Station</label>
+            <select id="metroTo"></select>
+          </div>
+        </div>
+        <button class="btn" onclick="calculateMetroFare()">Check Metro Fare</button>
+        <div class="result" id="metroFareResult"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Map & Nearby -->
+  <section id="mapSec">
+    <h2>🗺️ Smart Map & Nearby</h2>
+
+    <div class="grid cols-2">
+      <div>
+        <label>Search on Map</label>
+        <div class="row">
+          <input id="mapSearch" placeholder="Search any place in Lucknow">
+          <button class="btn" onclick="searchLocation()">Search</button>
+        </div>
+        <div class="grid" style="grid-template-columns:1fr 1fr; margin-top:10px">
+          <button class="btn ghost" onclick="useMyLocation()">📍 Use My Location</button>
+          <button class="btn ghost" onclick="copyMyLocation()">🔗 Share My Location</button>
+        </div>
+      </div>
+      <div>
+        <label>Quick Filters</label>
+        <div class="pillbar">
+          <div class="pill" onclick="showCategory('Hospitals')">Hospitals</div>
+          <div class="pill" onclick="showCategory('Police Stations')">Police</div>
+          <div class="pill" onclick="showCategory('Metro Stations')">Metro</div>
+          <div class="pill" onclick="showCategory('Restaurants')">Restaurants</div>
+          <div class="pill" onclick="showCategory('Hotels')">Hotels</div>
+          <div class="pill" onclick="showCategory('Parks')">Parks</div>
+          <div class="pill" onclick="showCategory('EV charging station')">EV Charging</div>
+          <div class="pill" onclick="showCategory('Parking')">Parking</div>
+          <div class="pill" onclick="showCategory('ATMs')">ATMs</div>
+        </div>
+      </div>
+    </div>
+
+    <iframe id="mapFrame" src="https://www.google.com/maps?q=Lucknow&output=embed" loading="lazy" allowfullscreen></iframe>
+
+    <!-- === NEW: Map Controls (Traffic/Satellite/Reset) === -->
+    <div class="map-ctl-bar">
+      <button class="btn" onclick="toggleTraffic(true)">🚦 Show Traffic</button>
+      <button class="btn ghost" onclick="toggleTraffic(false)">🚦 Hide Traffic</button>
+      <button class="btn" onclick="toggleSatellite(true)">🛰️ Satellite ON</button>
+      <button class="btn ghost" onclick="toggleSatellite(false)">🛰️ Satellite OFF</button>
+      <button class="btn outline" onclick="resetMap()">🔄 Reset Map</button>
+    </div>
+
+    <div class="row" style="justify-content:center; margin-top:10px; gap:10px">
+      <button class="btn" onclick="showFamousPlaces()">📍 Show Famous Lucknow Places</button>
+      <button class="btn ghost" onclick="openPlacesList()">🗂️ View List</button>
+    </div>
+  </section>
+
+  <!-- Feedback -->
+  <section id="feedback">
+    <h2>💬 Feedback / Suggestion</h2>
+    <div class="grid cols-2">
+      <div>
+        <label>Your Name</label>
+        <input id="fbName" placeholder="Adarsh">
+      </div>
+      <div>
+        <label>Email (optional)</label>
+        <input id="fbEmail" placeholder="you@example.com">
+      </div>
+    </div>
+    <label style="margin-top:10px">Message</label>
+    <textarea id="fbMsg" rows="4" placeholder="Your suggestion or issue..."></textarea>
+    <button class="btn" onclick="submitFeedback()">Send</button>
+    <div class="result" id="fbResult"></div>
+  </section>
+
+  <footer>
+    © 2025 Fare Finder & City Navigator — Made by Adarsh Tripathi. Need help? <a href="mailto:fairfindercntrcb@gmail.com">fairfindercntrcb@gmail.com</a>
+  </footer>
+</main>
+
+<!-- Voice Assistant -->
+<button class="va-fab" id="vaFab" title="Voice Assistant">🎤</button>
+<div class="va-panel" id="vaPanel">
+  <div class="va-hd">
+    <strong>Voice Assistant</strong>
+    <button class="btn outline" style="padding:4px 8px" onclick="toggleVA()">✕</button>
+  </div>
+  <div class="va-bd" id="vaLog">
+    <div class="muted">Try: “search Hazratganj”, “show hospitals”, “fare from Charbagh to Aminabad”, “famous places”</div>
+  </div>
+  <div class="va-ctl">
+    <button class="btn" onclick="vaStart()">Start</button>
+    <button class="btn ghost" onclick="vaStop()">Stop</button>
+    <select id="vaLang">
+      <option value="en-IN">English (India)</option>
+      <option value="hi-IN">हिन्दी (Hindi)</option>
+      <option value="ur-PK">اردو (Urdu)</option>
+      <option value="bn-IN">বাংলা</option>
+      <option value="mr-IN">मराठी</option>
+      <option value="gu-IN">ગુજરાતી</option>
+      <option value="ta-IN">தமிழ்</option>
+      <option value="te-IN">తెలుగు</option>
+      <option value="pa-IN">ਪੰਜਾਬੀ</option>
+    </select>
+  </div>
+</div>
+
+<!-- Google Translate -->
+<script>
+  function googleTranslateElementInit(){
+    new google.translate.TranslateElement({
+      pageLanguage:'en',
+      includedLanguages:
+        'af,am,ar,as,ay,az,be,bg,bho,bn,bs,ca,ceb,ckb,co,cs,cy,da,de,doi,el,en,eo,es,et,eu,fa,fi,fil,fr,fy,ga,gd,gl,gn,gu,ha,haw,he,hi,hmn,hr,ht,hu,hy,id,ig,ilo,is,it,ja,jv,ka,kk,km,kn,ko,kri,ku,ky,la,lb,lg,ln,lo,lt,lv,mai,mg,mi,mk,ml,mn,mr,ms,mt,my,ne,nl,no,ny,om,or,pa,pl,ps,pt,qu,ro,ru,rw,sa,sd,si,sk,sl,sm,sn,so,sq,sr,st,su,sv,sw,ta,te,tg,th,ti,tk,tl,tr,ts,tt,ug,uk,ur,uz,vi,xh,yi,yo,zh-CN,zh-TW,zu',
+      layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+      autoDisplay:false
+    }, 'google_translate_element');
+  }
+</script>
+<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+<script>
+/* ================== Data ================== */
+const metroStations=[
+ "CCS International Airport","Amausi","Transport Nagar","Krishna Nagar","Shingar Nagar","Alambagh","Alambagh ISBT",
+ "Mawaiya","Durgapuri","Charbagh","Hussainganj","Sachivalaya","Hazratganj","KD Singh Stadium","Lucknow University",
+ "IT College Jn","Mahanagar","Badshah Nagar","Lekhraj","RS Mishra Nagar","Indira Nagar","Munshi Pulia"
+];
+
+const famousPlaces=[
+ {name:"Bara Imambara", q:"Bara Imambara Lucknow"},
+ {name:"Rumi Darwaza", q:"Rumi Darwaza Lucknow"},
+ {name:"Ambedkar Memorial Park", q:"Ambedkar Memorial Park Lucknow"},
+ {name:"Hazratganj", q:"Hazratganj Lucknow"},
+ {name:"Janeshwar Mishra Park", q:"Janeshwar Mishra Park"},
+ {name:"Chowk", q:"Chowk Lucknow"},
+ {name:"British Residency", q:"British Residency Lucknow"},
+ {name:"Gomti Riverfront", q:"Gomti Riverfront Park"},
+ {name:"Husainabad Clock Tower", q:"Husainabad Clock Tower"},
+ {name:"Phoenix Palassio", q:"Phoenix Palassio"},
+];
+
+/* ================== Theme ================== */
+const html=document.documentElement;
+document.getElementById('themeBtn').onclick=()=>{
+  const next = html.getAttribute('data-theme')==='dark' ? '' : 'dark';
+  if(next) html.setAttribute('data-theme','dark'); else html.removeAttribute('data-theme');
+  localStorage.setItem('ff_theme', next);
+};
+(() => { const t=localStorage.getItem('ff_theme'); if(t==='dark') html.setAttribute('data-theme','dark'); })();
+
+/* ================== Language menu (100+ langs) ================== */
+const langBtn=document.getElementById('langBtn');
+const langDrop=document.getElementById('langDrop');
+langBtn.onclick=()=> langDrop.style.display = langDrop.style.display==='block' ? 'none' : 'block';
+document.addEventListener('click',e=>{ if(!langDrop.contains(e.target) && !langBtn.contains(e.target)) langDrop.style.display='none'; });
+
+// Build list (label -> code) — short curated + full auto from combo afterwards
+const LANGS = [
+ ["English","en"],["हिन्दी","hi"],["বাংলা","bn"],["اردو","ur"],["मराठी","mr"],["ગુજરાતી","gu"],["தமிழ்","ta"],["తెలుగు","te"],["ਪੰਜਾਬੀ","pa"],
+ ["Español","es"],["Français","fr"],["Deutsch","de"],["Italiano","it"],["Português","pt"],["Русский","ru"],["中文(简体)","zh-CN"],["中文(繁體)","zh-TW"],["日本語","ja"],["한국어","ko"]
+];
+// Render quick list
+function renderLangButtons(extraFromWidget=[]){
+  langDrop.innerHTML = '<div class="muted" style="padding:4px 6px">100+ languages powered by Google Translate</div>';
+  const all = [...LANGS, ...extraFromWidget.filter(c => !LANGS.find(x=>x[1]===c[1]))];
+  all.forEach(([label,code])=>{
+    const b=document.createElement('button');
+    b.className='btn';
+    b.style.margin='6px 0';
+    b.textContent=label;
+    b.onclick=()=>setTranslateTo(code);
+    langDrop.appendChild(b);
+  });
+}
+// Try to read widget list (after it loads)
+setTimeout(()=>{
+  const sel=document.querySelector('.goog-te-combo');
+  const items=[];
+  if(sel){ for(const opt of sel.options){ if(opt.value) items.push([opt.textContent,opt.value]); } }
+  renderLangButtons(items);
+}, 1200);
+
+function setTranslateTo(code){
+  const sel=document.querySelector('.goog-te-combo');
+  if(!sel) return;
+  sel.value=code;
+  sel.dispatchEvent(new Event('change'));
+  langDrop.style.display='none';
+}
+
+/* ================== Fare (general) ================== */
+function calculateFare(){
+  const from=document.getElementById('from').value.trim();
+  const to=document.getElementById('to').value.trim();
+  const mode=document.getElementById('mode').value;
+  const km=parseFloat(document.getElementById('km').value);
+  if(!from||!to){ return show('fareResult',"Please enter From & To"); }
+
+  // Simple per-km rules (fallback if km missing -> flat)
+  const base = {auto:25, rickshaw:20, bus:20, car:75}[mode] || 25;
+  const perKm = {auto:12, rickshaw:10, bus:4, car:20}[mode] || 10;
+
+  let fare = base;
+  if(!isNaN(km) && km>0){
+    fare = Math.round(base + perKm * Math.max(0, km-1));
+  }
+  show('fareResult', `Estimated Fare: ₹${fare}`);
+  speak(`Estimated fare is ${fare} rupees`);
+}
+
+/* ================== Metro fare ================== */
+const metroFrom=document.getElementById('metroFrom');
+const metroTo=document.getElementById('metroTo');
+metroStations.forEach(s=>{
+  const o1=document.createElement('option'); o1.textContent=s; metroFrom.appendChild(o1);
+  const o2=document.createElement('option'); o2.textContent=s; metroTo.appendChild(o2);
+});
+function calculateMetroFare(){
+  const f=metroFrom.value, t=metroTo.value;
+  if(f===t) return show('metroFareResult','Select different stations');
+  const d=Math.abs(metroStations.indexOf(f)-metroStations.indexOf(t));
+  const fare = d<=1?10 : d<=3?15 : d<=6?20 : d<=9?30 : d<=13?40 : d<=17?50 : 60;
+  show('metroFareResult',`Lucknow Metro Fare: ₹${fare}`);
+  speak(`Metro fare is ${fare} rupees`);
+}
+
+/* ================== Map helpers ================== */
+const map=document.getElementById('mapFrame');
+let lastQuery = 'Lucknow';
+let trafficOn=false, satelliteOn=false;
+
+function setMapSrcByQuery(q){
+  // base
+  let url = `https://www.google.com/maps?q=${encodeURIComponent(q)}&output=embed`;
+  // satellite toggle via &t=k (fallback on many builds)
+  if(satelliteOn){ url += `&t=k`; }
+  // traffic layer via &layer=t (may vary by region; works on most embeds)
+  if(trafficOn){ url += `&layer=t`; }
+  map.src = url;
+}
+
+function searchLocation(){
+  const q=(document.getElementById('mapSearch').value.trim() || 'Lucknow') + ' Lucknow';
+  lastQuery = q;
+  setMapSrcByQuery(q);
+  speak('Showing ' + q);
+}
+function showCategory(cat){
+  const q = `${cat} near Lucknow`;
+  lastQuery = q;
+  setMapSrcByQuery(q);
+  speak('Showing '+cat+' near Lucknow');
+}
+function showFamousPlaces(){
+  const q = famousPlaces.map(p=>p.q).join(', ');
+  lastQuery = q;
+  setMapSrcByQuery(q);
+  speak('Showing famous places of Lucknow');
+}
+function openPlacesList(){
+  alert('Famous Places:\n' + famousPlaces.map(p=>'• '+p.name).join('\n'));
+}
+
+/* Directions embed (no API key) */
+function openDirections(mode){
+  const from=document.getElementById('from').value.trim()||'Lucknow';
+  const to=document.getElementById('to').value.trim()||'Hazratganj Lucknow';
+  const travel = (mode==='transit'?'transit':'driving');
+  // note: directions ignore layer toggles, this opens full directions UI
+  map.src = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(from)}&destination=${encodeURIComponent(to)}&travelmode=${travel}`;
+}
+
+/* === NEW: Traffic / Satellite / Reset === */
+function toggleTraffic(on){
+  trafficOn = !!on;
+  setMapSrcByQuery(lastQuery);
+}
+function toggleSatellite(on){
+  satelliteOn = !!on;
+  setMapSrcByQuery(lastQuery);
+}
+function resetMap(){
+  trafficOn=false; satelliteOn=false;
+  document.getElementById('mapSearch').value='';
+  lastQuery='Lucknow';
+  setMapSrcByQuery(lastQuery);
+}
+
+/* Geolocation + rough time estimator */
+let myLatLng=null;
+function useMyLocation(){
+  if(!navigator.geolocation){ return alert('Geolocation not supported'); }
+  navigator.geolocation.getCurrentPosition(pos=>{
+    myLatLng=[pos.coords.latitude, pos.coords.longitude];
+    lastQuery = `${myLatLng[0]},${myLatLng[1]}`;
+    setMapSrcByQuery(lastQuery);
+  }, ()=>alert('Location denied'));
+}
+async function copyMyLocation(){
+  if(!myLatLng){
+    if(!navigator.geolocation){return alert('Geolocation not supported');}
+    return navigator.geolocation.getCurrentPosition(p=>{
+      myLatLng=[p.coords.latitude,p.coords.longitude];
+      copyMyLocation();
+    },()=>alert('Location denied'));
+  }
+  const link=`https://www.google.com/maps?q=${myLatLng[0]},${myLatLng[1]}`;
+  try{ await navigator.clipboard.writeText(link); alert('Copied: '+link); }
+  catch{ prompt('Copy this link', link); }
+}
+
+/* ================== Voice Assistant ================== */
+const vaFab=document.getElementById('vaFab');
+const vaPanel=document.getElementById('vaPanel');
+const vaLog=document.getElementById('vaLog');
+const vaLang=document.getElementById('vaLang');
+let recognition=null;
+
+function logLine(t){ const d=document.createElement('div'); d.textContent=t; vaLog.appendChild(d); vaLog.scrollTop=vaLog.scrollHeight; }
+function toggleVA(){ vaPanel.style.display = vaPanel.style.display==='block' ? 'none' : 'block'; }
+vaFab.onclick=toggleVA;
+
+function speak(text){
+  if(!('speechSynthesis' in window)) return;
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang=vaLang.value||'en-IN';
+  window.speechSynthesis.speak(u);
+}
+
+if('webkitSpeechRecognition' in window || 'SpeechRecognition' in window){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR(); recognition.continuous=false; recognition.interimResults=false;
+  recognition.onresult = (e)=>{
+    const t=e.results[0][0].transcript.trim();
+    logLine('🎙️ You: '+t);
+    handleCommand(t);
+  };
+  recognition.onerror = e => logLine('⚠️ '+(e.error||'mic error'));
+  recognition.onend = ()=>{};
+}else{
+  logLine('⚠️ Voice not supported in this browser.');
+}
+
+function vaStart(){
+  if(!recognition){ alert('Voice not supported'); return; }
+  if(speechSynthesis.speaking) speechSynthesis.cancel();
+  recognition.lang=vaLang.value||'en-IN';
+  recognition.start(); logLine('🎧 Listening… ('+recognition.lang+')');
+}
+function vaStop(){ if(recognition) recognition.stop(); logLine('⏹️ Stopped'); }
+
+function handleCommand(raw){
+  const q=raw.toLowerCase();
+
+  // language quick
+  if(q.startsWith('language ')||q.startsWith('भाषा ')||q.includes('हिंदी')){
+    setTranslateTo('hi'); speak('Language set to Hindi'); return;
+  }
+
+  // search / find
+  if(q.startsWith('search ')||q.startsWith('find ')){
+    const place=raw.replace(/^(search|find)\s+/i,'').trim();
+    document.getElementById('mapSearch').value=place; searchLocation(); return;
+  }
+
+  // categories
+  const cats=['hospital','police','restaurant','hotel','park','ev','charging','parking','atm','metro'];
+  for(const c of cats){
+    if(q.includes(c)){ 
+      const mapKey = c==='ev' || q.includes('charging') ? 'EV charging station' :
+                     c==='metro' ? 'Metro Stations' :
+                     c==='atm' ? 'ATMs' :
+                     c==='police' ? 'Police Stations' :
+                     c==='hotel' ? 'Hotels' :
+                     c==='restaurant' ? 'Restaurants' :
+                     c==='park' ? 'Parks' :
+                     c==='parking' ? 'Parking' : 'Hospitals';
+      showCategory(mapKey); return;
+    }
+  }
+
+  // fare intents
+  if(q.includes('fare')){
+    // e.g. "fare from Charbagh to Aminabad by auto"
+    const mm=q.match(/from\s+(.+?)\s+to\s+(.+?)(?:\s+by\s+(auto|rickshaw|bus|car))?$/i);
+    if(mm){
+      document.getElementById('from').value=mm[1];
+      document.getElementById('to').value=mm[2];
+      if(mm[3]) document.getElementById('mode').value=mm[3].toLowerCase();
+    }
+    calculateFare(); return;
+  }
+
+  if(q.includes('metro')){
+    const mm=q.match(/from\s+(.+?)\s+to\s+(.+)$/i);
+    if(mm){
+      setSelectByText(metroFrom, mm[1]); setSelectByText(metroTo, mm[2]);
+    }
+    calculateMetroFare(); return;
+  }
+
+  if(q.includes('famous')){ showFamousPlaces(); return; }
+
+  // traffic / satellite voice commands
+  if(q.includes('traffic')){ toggleTraffic(true); return; }
+  if(q.includes('satellite')){ toggleSatellite(true); return; }
+  if(q.includes('reset map')){ resetMap(); return; }
+
+  // fallback → treat as search
+  document.getElementById('mapSearch').value = raw; searchLocation();
+}
+
+function setSelectByText(sel, text){
+  text=(text||'').toLowerCase();
+  for(const opt of sel.options){ if(opt.textContent.toLowerCase().includes(text)){ sel.value=opt.textContent; return; } }
+}
+
+/* ================== Helpers ================== */
+function show(id, msg){ document.getElementById(id).textContent = msg; }
+
+/* ================== Feedback ================== */
+function submitFeedback(){
+  const name=document.getElementById('fbName').value.trim()||'Guest';
+  const email=document.getElementById('fbEmail').value.trim();
+  const msg=document.getElementById('fbMsg').value.trim();
+  if(!msg) return show('fbResult','Please write a message.');
+  const mail=`mailto:fairfindercntrcb@gmail.com?subject=Feedback from ${encodeURIComponent(name)}&body=${encodeURIComponent(msg+(email?'\n\nReply at: '+email:''))}`;
+  window.location.href = mail;
+  show('fbResult','Thanks! Your email window should open now.');
+}
+
+/* ================== NEW: Top Info Bar Logic ================== */
+const dateTag=document.getElementById('dateTag');
+const timeTag=document.getElementById('timeTag');
+const cityTag=document.getElementById('cityTag');
+const weatherTag=document.getElementById('weatherTag');
+const greetTxt=document.getElementById('greetTxt');
+
+function updateClock(){
+  const now=new Date();
+  dateTag.textContent = '📅 ' + now.toLocaleDateString('en-IN',{weekday:'short', day:'2-digit', month:'short', year:'numeric'});
+  timeTag.textContent = '🕒 ' + now.toLocaleTimeString('en-IN',{hour:'2-digit', minute:'2-digit'});
+  const h=now.getHours();
+  greetTxt.textContent = (h<12?'🌅 Good Morning':h<17?'🌞 Good Afternoon':'🌙 Good Evening') + ', Adarsh!';
+}
+setInterval(updateClock, 1000); updateClock();
+
+// Weather code -> emoji/text
+function weatherLabel(code){
+  // Minimal mapping for Open-Meteo weathercode
+  if([0].includes(code)) return '☀️ Clear';
+  if([1,2].includes(code)) return '⛅ Partly cloudy';
+  if([3].includes(code)) return '☁️ Cloudy';
+  if([45,48].includes(code)) return '🌫️ Fog';
+  if([51,53,55,56,57].includes(code)) return '🌦️ Drizzle';
+  if([61,63,65,66,67].includes(code)) return '🌧️ Rain';
+  if([71,73,75,77,85,86].includes(code)) return '❄️ Snow';
+  if([80,81,82].includes(code)) return '🌦️ Showers';
+  if([95,96,99].includes(code)) return '⛈️ Thunderstorm';
+  return '🌤️';
+}
+
+function getCityFromCoords(lat, lon){
+  // OpenStreetMap Nominatim reverse geocode (no key)
+  return fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=12`)
+    .then(r=>r.json())
+    .then(j=>{
+      const a=j.address||{};
+      return a.city || a.town || a.village || a.suburb || a.state_district || a.state || 'Your Area';
+    }).catch(()=> 'Your Area');
+}
+
+function loadWeatherAndCity(){
+  if(!navigator.geolocation){
+    cityTag.textContent='📍 Location off';
+    weatherTag.textContent='🌤️ N/A';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const lat=pos.coords.latitude, lon=pos.coords.longitude;
+    // City
+    try{
+      const city = await getCityFromCoords(lat,lon);
+      cityTag.textContent = '📍 ' + city;
+    }catch{ cityTag.textContent='📍 Your Area'; }
+    // Weather
+    try{
+      const res=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+      const data=await res.json();
+      const w=data.current_weather;
+      weatherTag.textContent = `${weatherLabel(w.weathercode)} ${w.temperature}°C`;
+    }catch{
+      weatherTag.textContent='🌤️ Weather N/A';
+    }
+  }, ()=>{
+    cityTag.textContent='📍 Location blocked';
+    weatherTag.textContent='🌤️ Weather N/A';
+  }, {timeout:10000});
+}
+loadWeatherAndCity();
+</script>
+<script>
+/* ===================== Rapid AI Assistant (Frontend Only) ===================== */
+const OPENAI_KEY = "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"; // ⚠️ Use your key only for testing
+
+async function askRapid(prompt){
+  try{
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + OPENAI_KEY
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "You are Rapid, an AI voice assistant inside a Lucknow navigation app. Speak concisely and clearly." },
+          { role: "user", content: prompt }
+        ]
+      })
+    });
+    const data = await res.json();
+    return data.choices[0].message.content.trim();
+  }catch(err){
+    return "Rapid could not connect to OpenAI right now.";
+  }
+}
+
+/* Replace old handleCommand with this one */
+async function handleCommand(raw){
+  const q = raw.toLowerCase().trim();
+  logLine("🎙️ You: " + q);
+
+  // --- Activation ---
+  if(q === "hey rapid" || q === "rapid"){
+    speak("Hello Adarsh! Rapid is online. How can I help?");
+    logLine("🤖 Rapid: Hello Adarsh! Rapid is online.");
+    return;
+  }
+
+  // --- Basic actions ---
+  if(q.includes("dark mode")){ 
+    document.documentElement.setAttribute('data-theme','dark');
+    speak("Dark mode activated."); return;
+  }
+  if(q.includes("light mode")){ 
+    document.documentElement.removeAttribute('data-theme');
+    speak("Light mode activated."); return;
+  }
+
+  if(q.includes("show traffic")){ toggleTraffic(true); speak("Traffic layer on."); return; }
+  if(q.includes("hide traffic")){ toggleTraffic(false); speak("Traffic layer off."); return; }
+  if(q.includes("satellite on")){ toggleSatellite(true); speak("Satellite view enabled."); return; }
+  if(q.includes("satellite off")){ toggleSatellite(false); speak("Satellite view disabled."); return; }
+  if(q.includes("reset map")){ resetMap(); speak("Map reset."); return; }
+
+  // --- Fare Calculation ---
+  if(q.includes("fare from")){
+    const mm = q.match(/from\s+(.+?)\s+to\s+(.+?)(?:\s+by\s+(auto|rickshaw|bus|car))?$/i);
+    if(mm){
+      document.getElementById('from').value = mm[1];
+      document.getElementById('to').value = mm[2];
+      if(mm[3]) document.getElementById('mode').value = mm[3];
+      calculateFare();
+      speak(`Calculating fare from ${mm[1]} to ${mm[2]}`);
+      return;
+    }
+  }
+
+  // --- Metro fare ---
+  if(q.includes("metro fare from")){
+    const mm = q.match(/from\s+(.+?)\s+to\s+(.+)$/i);
+    if(mm){
+      setSelectByText(metroFrom, mm[1]);
+      setSelectByText(metroTo, mm[2]);
+      calculateMetroFare();
+      speak(`Checking metro fare from ${mm[1]} to ${mm[2]}`);
+      return;
+    }
+  }
+
+  // --- Map Queries ---
+  if(q.includes("show hospital")){ showCategory("Hospitals"); speak("Showing hospitals near Lucknow."); return; }
+  if(q.includes("show metro")){ showCategory("Metro Stations"); speak("Showing metro stations."); return; }
+  if(q.includes("show restaurant")){ showCategory("Restaurants"); speak("Showing restaurants near Lucknow."); return; }
+  if(q.includes("show parking")){ showCategory("Parking"); speak("Showing parking areas."); return; }
+  if(q.includes("show hotel")){ showCategory("Hotels"); speak("Showing hotels."); return; }
+
+  // --- Information Query (AI Mode) ---
+  if(q.startsWith("who") || q.startsWith("what") || q.startsWith("where") || q.startsWith("tell") || q.startsWith("when")){
+    logLine("🤖 Rapid: Searching...");
+    speak("Let me think...");
+    const aiReply = await askRapid(q);
+    logLine("🤖 Rapid: " + aiReply);
+    speak(aiReply);
+    return;
+  }
+
+  // --- Chat fallback ---
+  const aiReply = await askRapid(q);
+  logLine("🤖 Rapid: " + aiReply);
+  speak(aiReply);
+}
+</script>
+
+
+</body>
+</html>
